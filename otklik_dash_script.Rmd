@@ -1,0 +1,98 @@
+---
+title: "HW 2: Предсказание отклика"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+marketing = read.csv("~/shared/minor2_2021/1-Intro/hw2/marketing_campaign.csv")
+library(flexdashboard)
+library(rpart)
+library(rpart.plot)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(coin)
+marketing = na.omit(marketing)
+marketing = marketing %>% dplyr::select(-ID)
+
+
+train = sample_frac(marketing, 0.8)
+
+tree <- rpart(Response ~ Kidhome + Teenhome + Marital_Status + Recency, method = "class", data = train)
+prp(tree, extra = 4)
+
+pred = predict(tree, type="class", data = train)
+t = table(pred, train$Response)
+a1 <- (t[1,1] + t[2,2])/sum(t)
+
+marketing2 = marketing %>% filter(Year_Birth > 1980)
+marketing3 = marketing %>% filter(Year_Birth <= 1980)
+
+train2 = sample_frac(marketing2, 0.8)
+
+tree2 <- rpart(Response ~ Kidhome + Teenhome + Marital_Status + Recency, method = "class", data = train2)
+prp(tree2, extra = 4)
+
+pred2 = predict(tree2, type="class", data = train2)
+t2 = table(pred2, train2$Response)
+a2 <- (t2[1,1] + t2[2,2])/sum(t2)
+
+train3 = sample_frac(marketing3, 0.8)
+
+tree3 <- rpart(Response ~ Kidhome + Teenhome + Marital_Status + Recency, method = "class", data = train3)
+prp(tree3, extra = 4)
+
+pred3 = predict(tree3, type="class", data = train3)
+t3 = table(pred3, train3$Response)
+a3 <- (t3[1,1] + t3[2,2])/sum(t3)
+# загрузка данных, предобработка 
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Какая взаимосвязь между числом дней, прошедших\nс последней покупки, и откликом у клиента?
+
+```{r}
+marketing$Response = as.factor(marketing$Response)
+ggplot(data=marketing) +
+  geom_boxplot(aes(x=Response, y=Recency))+
+  ylab("Число дней, прошедших с последней покупки") +
+  xlab("Отклик (0 - отлика нет, 1 - отклик есть)")+
+  theme_light()+ 
+  ggtitle("Какая взаимосвязь между числом дней, прошедших\nс последней покупки, и откликом у клиента?")
+```
+
+
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Какая взаимосвязь между статусом брака и откликом клиента?
+
+```{r}
+ggplot(data = marketing) + 
+  geom_bar(aes(x = Response)) +
+  facet_grid(cols = vars(Marital_Status)) +
+  ylab("Количество") +
+  xlab("Отклик (0 - отлика нет, 1 - отклик есть)")+
+  theme_light()+ 
+  ggtitle("Какая взаимосвязь между статусом брака и откликом клиента?")
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+### Одно из деревьев
+```{r}
+prp(tree, extra = 4)
+```
+
+### Средняя точность предсказания
+
+```{r}
+avg_a = (a1+a2+a3)/3
+valueBox(avg_a)
+```

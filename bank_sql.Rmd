@@ -1,0 +1,320 @@
+---
+title: 'Проект SQL: Отток клиентов из банка'
+author: "Бобриков Дмитрий, ddbobrikov"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+```
+
+## Задача
+
+Я выбрал первую задачу:
+
+* анализ того, почему клиенты банка не заключают новые договоры
+ 
+С точки зрения потенциального заказчика нужно: 
+
+* определить, какие группы клиентов чаще всего уходят
+* спрогнозировать возможные изменения в оттоке клиентов при улучшении качества банковских услуг или при предложении клиенту услуг, ранее не использованных им
+
+Это нужно сделать, чтобы путем определенных действий *уменьшить поток оттока клиентов*, чтобы *увеличить прибыль банка*. 
+
+## Анализ
+
+### Данные и логика анализа
+
+Подключение к базе.
+
+```{r}
+library(DBI)
+library(RMariaDB)
+con <- dbConnect(RMariaDB::MariaDB(), 
+                 user='student2022minor', 
+                 password='DataMinorHSE!2020', 
+                 dbname='bank', 
+                 host='hsepiterdata-1.cqq6v5igyw1z.us-east-2.rds.amazonaws.com',
+                 port = 3315)
+dbListTables(con)
+```
+
+В этом проекте мы будем работать с таблицами "country", "profile" и "portfolio"
+Давайте посмотрим, какие группы клиентов чаще всего уходят из банка.
+```{r}
+exited = dbGetQuery(con, "SELECT Exited, Gender, Age, EstimatedSalary, Tenure, 
+                          Balance, NumOfProducts, HasCrCard, CreditScore
+                         FROM portfolio INNER JOIN profile
+                         ON portfolio.CustomerId = profile.CustomerId")
+```
+
+Преобразуем типы
+```{r}
+library(dplyr)
+exited = exited %>% 
+  mutate(Exited = case_when(Exited == 0 ~ "No", 
+                            TRUE ~ "Yes")) %>% 
+  mutate(HasCrCard = case_when(HasCrCard == 0 ~ "No",
+                               TRUE ~ "Yes"))
+exited = exited %>% mutate_if(is.character, as.factor)
+```
+
+Преобразуем факторы в числа (дамми-переменные)
+```{r}
+exitedNum = fastDummies::dummy_cols(exited, remove_first_dummy = TRUE)
+exitedNum = exitedNum %>% select(-Exited, -Gender, -HasCrCard)
+```
+
+Считаем разделение на кластеры
+```{r}
+set.seed(666)
+km = kmeans(scale(exitedNum), centers = 5)
+exitedNum$cluster = km$cluster
+```
+
+И финальное описание
+```{r}
+exitedNum %>% group_by(cluster) %>% summarise_all(mean)
+```
+
+Мы можем наблюдать кластер под номером 4, где все клиенты ушли из банка. Из отличительных показателей этого кластера можно отметить: 
+
+* возраст - он в среднем выше, чем в других кластерах
+
+* кредитный скоринг клиента - он в среднем меньше, чем в других кластерах
+
+* пол - в среднем чаще уходят женщины (вывод сделан на основе того, что Gender_Male меньше половины)
+
+* есть ли кредитная карта - у ушедших клиентов в среднем меньше кредитных карт, чем в остальных кластерах, за исключением 5.
+
+Посмотрим, правда ли, что женщины в целом уходят чаще из банка
+
+```{r}
+data4 = dbGetQuery(con, "SELECT Exited, COUNT(*) AS n
+                         FROM portfolio
+                         GROUP BY Exited")
+```
+
+```{r}
+data5 = dbGetQuery(con, "SELECT Gender, COUNT(*) AS n
+                         FROM portfolio INNER JOIN profile
+                         ON portfolio.CustomerId = profile.CustomerId
+                         WHERE Exited = 0
+                         GROUP BY Gender")
+```
+
+```{r}
+data6 = dbGetQuery(con, "SELECT Gender, COUNT(*) AS n
+                         FROM portfolio INNER JOIN profile
+                         ON portfolio.CustomerId = profile.CustomerId
+                         WHERE Exited = 1
+                         GROUP BY Gender")
+```
+
+```{r}
+library(plotly)
+plot_ly(
+  labels = c("Total", "Did not exit", "Exited", "Female", "Male",
+             "Female ", "Male "),
+  parents = c("", "Total", "Total", "Did not exit", "Did not exit", "Exited", "Exited"),
+  values = c(sum(data4$n), data4$n, data5$n, data6$n),
+  type = 'sunburst',
+  branchvalues = 'total'
+)
+```
+
+Несмотря на то, что женщин в целом меньше, чем мужчин, они действительно уходят больше. На это обязательно стоит обратить внимание в дальнейшем!
+
+Подводя итоги анализа на данный момент, для дальнейшего анализа стоит взять взять подгруппу со следующими критериями: 
+
+1) Женщины 
+
+2) Возраст выше среднего
+
+3) Кредитный скоринг меньше среднего
+
+Посчитаем медиану для возраста
+```{r}
+res_age = dbGetQuery(con, "SELECT profile.CustomerId AS CustomerId, SUM(Age) AS TotalAge
+                 FROM profile INNER JOIN portfolio 
+                 ON profile.CustomerId = portfolio.CustomerId
+                 GROUP BY profile.CustomerId")
+
+median_age = median(res_age$TotalAge)
+median_age
+```
+
+Медианный возраст составил 37 лет. Следовательно, будем фильтровать нашу подгруппу с условием, что возраст должен быть больше 37.
+
+Теперь посчитаем медиану для кредитного скоринга
+```{r}
+res_cs = dbGetQuery(con, "SELECT profile.CustomerId AS CustomerId, SUM(CreditScore) AS TotalCS
+                 FROM profile INNER JOIN portfolio 
+                 ON profile.CustomerId = portfolio.CustomerId
+                 GROUP BY profile.CustomerId")
+
+median_cs = median(res_cs$TotalCS)
+median_cs
+```
+
+Медианный кредитный скоринг составил 652. Значит, будем фильтровать нашу подгруппу с условием, что кредитный скоринг должен быть меньше 652.
+
+Теперь можем создать датафрейм со всеми нашими условиями и переменными для дальнейшего анализа.
+```{r}
+final_exited = dbGetQuery(con, "SELECT Exited, Gender, Age, EstimatedSalary, Tenure, 
+                          Balance, NumOfProducts, HasCrCard, CreditScore
+                          FROM profile INNER JOIN portfolio 
+                          ON profile.CustomerId = portfolio.CustomerId
+                          GROUP BY profile.CustomerId
+                          HAVING Gender = 'Female' AND Age > 37 AND CreditScore < 652")
+```
+
+
+### Модель
+
+Больше нам не нужно соединение с базой, поэтому закрываем соединение
+```{r}
+dbDisconnect(con)
+```
+
+Преобразуем переменные character в factor и уберем переменную Gender, так как у нас все женщины
+
+```{r}
+final_exited = final_exited %>% mutate_if(is.character, as.factor)
+final_exited$Exited = as.factor(final_exited$Exited)
+final_exited = final_exited %>% select(-Gender)
+```
+
+Строим модель "дерево"
+```{r}
+library(partykit)
+library(caret)
+set.seed(100)
+ind = createDataPartition(final_exited$Exited, p = 0.8, list = F)
+train = final_exited[ind,]
+test = final_exited[-ind,]
+```
+
+```{r}
+treemodel = ctree(Exited~., data = train)
+plot(treemodel)
+```
+
+Мы можем заметить, что разбиение основывается на возрасте, но мы с ним ничего не можем сделать для уменьшения оттока. Нехороший знак...
+
+Оцениваем качество модели
+```{r}
+predTest = predict(treemodel, test)
+confusionMatrix(predTest, test$Exited)
+```
+
+В целом чутка лучше, чем рандомно самому определять классы (где accuracy составила бы 0.5 по теории вероятности), поэтому можем работать дальше
+
+Построим модель логистической регрессии и оценим ее качество
+```{r}
+library(tidymodels)
+set.seed(100)
+model = logistic_reg()
+logreg = model %>% fit(Exited~., data = train)
+predlog = predict(logreg, test)
+
+table(predlog$.pred_class, test$Exited)
+
+test %>% 
+  mutate(pred =predlog$.pred_class) %>% 
+  conf_mat(estimate = pred, truth = Exited) %>% 
+  summary()
+```
+
+Здесь accuracy чуть поменьше, чем в предыдущей модели
+
+Давайте оценим важность признаков 
+```{r}
+library(vip)
+vip(treemodel)
+vip(logreg)
+```
+
+У логистической регрессии гораздо больше важных переменных, по сравнению с деревом решений. Для дальнейшей симуляции будем использовать поэтому логистическую регрессию 
+
+Давайте посмотрим на распределение одного из важных признаков в логистической регрессии - NumOfProducts (количество продуктов у клиента) -  в зависимости от того, уходил ли клиент или нет (смотрим и тестовую, и тренировочную выборки)
+```{r}
+ggplot(train) + geom_bar(aes(x = NumOfProducts, fill = Exited), position = "fill")
+ggplot(test) + geom_bar(aes(x = NumOfProducts, fill = Exited), position = "fill")
+```
+
+Можем заметить, что покинувшие банк клиенты чаще всего имеют 1 или 2 продукта от банка. Справедливости ради стоит также обратить внимание на то, что клиентов с 3 или 4 продуктами намного меньше, чем с 1 или 2, но при этом действитетельно их обладатели больше склонны уходить из банка.
+
+### Симуляция
+
+Давайте попробуем увеличить количество продуктов на 1 для тех клиентов, у кого на момент до преобразования уже был 1 продукт (выглядит как акция для недавно присоединившихся клиентов). Допустим, что наш банк предлагает самые выгодные условия для открытия вклада на всем банковском рынке, если у клиента открыт счет или есть кредит в банке (как раз 1 продукт). Предположим, что наши условия сработали в 15% случаев.
+```{r}
+set.seed(666)
+test2 = test
+test2$NumOfProducts[test2$NumOfProducts == 1] = 
+  sample(c(1, 2), 
+         size = length(test2$NumOfProducts[test2$NumOfProducts == 1]),
+         replace = T, prob = c(0.85, 0.15))
+
+predTest2 = predict(logreg, test2)$.pred_class
+ggplot(data.frame(predTest)) + geom_bar(aes(x = predTest), alpha = 0.5, fill = "red") +
+   geom_bar(data = data.frame(predTest2), aes(x = predTest2), alpha = 0.5, fill = "blue") +
+  geom_bar(data = test, aes(x = Exited), alpha = 0.5)
+```
+
+Можем заметить, что после симуляции модель предсказывает, что больше клиентов остается у банка. Красный цвет показывает результаты до симуляции, а синий цвет - после симуляции (фиолетовый получился наложением синего и красного цветов). Следовательно, мы видим, что синего цвета у неушедших клиентов намного больше, поэтому можем сделать вывод о том, что наше предположение о том, что привлечение клиентов путем предложения им нашей акции, оказалось верным.
+
+Давайте также посмотрим на интерактивную визуализацию наших данных до симуляции, чтобы понимать, насколько отличаются ушедшие и оставшиеся клиенты между с собой в рамках количества используемых продуктов.
+```{r}
+library(crosstalk)
+sharedData <- SharedData$new(final_exited)
+bscols(widths = c(3,NA),
+  list(
+         filter_checkbox("status", "Ушел или нет", sharedData, ~Exited),
+         filter_slider("credit score", "Кредитный скоринг", sharedData, ~CreditScore),
+         filter_slider("age", "Возраст", sharedData, ~Age)
+       ),
+  plot_ly(sharedData, 
+        x = ~CreditScore, y = ~Age, color = ~as.factor(NumOfProducts), 
+        type = "scatter", 
+        colors = "Set3")
+)
+```
+
+
+
+### Дэшборд
+
+В дэшборд я внесу два элемента: 
+
+* Интерактивную визуализацию с информацией о том, что клиентки (то есть женщины) уходят чаще из банка. 
+
+* Интерактивную визуализацию о том, насколько отличаются ушедшие и оставшиеся клиенты между с собой в рамках количества используемых продуктов.
+
+Данный дэшборд полезен для понимания нашей "группы риска" и ее дальнейшего анализа. Дэшборд по большей части предназначен для аналитиков данных, которые после полученной информации должны будут спрогнозировать улучшения для данной выборки, чтобы уменьшить отток клиентов.
+
+
+## Общие выводы
+
+Я провел кластеризацию, используя k.means и разбиение на 5 кластеров на основе нескольких переменных. В моем случае при установленном мною сиде получилось, что в 4 кластере все клиенты ушли из банка (что и является целевой переменной "Exited"). Еще в этом кластере интересны следующие переменные: 
+
+* возраст - он в среднем выше, чем в других кластерах
+
+* кредитный скоринг клиента - он в среднем меньше, чем в других кластерах
+
+* пол - в среднем чаще уходят женщины (вывод сделан на основе того, что Gender_Male меньше половины)
+
+* есть ли кредитная карта - у ушедших клиентов в среднем меньше кредитных карт, чем в остальных кластерах, за исключением 5.
+
+Поэтому я решил взять сегмент данных со следующими критериями: 
+
+1) Женщины 
+
+2) Возраст выше среднего
+
+3) Кредитный скоринг меньше среднего
+
+После выбора группы для анализа были построены две модели: дерево решений и логистическая регрессия. Для дальнейшей работы была выбрана логистическая регрессия, поскольку она выявила больше важных признаков. На основе модели была проведена симуляция количества продуктов, так как данная переменная значилась важной для регрессии и мы еще можем на нее повлиять. Результаты показали, что при использовании нашей "акции" (наш банк предлагает самые выгодные условия для открытия вклада на всем банковском рынке, если у клиента открыт счет или есть кредит в банке) увеличение количества продуктов позволило уменьшить отток клиентов. Задача всей работы выполнена!
+

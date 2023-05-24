@@ -1,0 +1,95 @@
+---
+title: "Risk Group Analysis"
+output: 
+  flexdashboard::flex_dashboard:
+     orientation: columns
+     vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DBI)
+library(RMariaDB)
+library(plotly)
+library(dplyr)
+library(crosstalk)
+```
+
+```{r}
+con <- dbConnect(RMariaDB::MariaDB(), 
+                 user='student2022minor', 
+                 password='DataMinorHSE!2020', 
+                 dbname='bank', 
+                 host='hsepiterdata-1.cqq6v5igyw1z.us-east-2.rds.amazonaws.com',
+                 port = 3315)
+
+data4 = dbGetQuery(con, "SELECT Exited, COUNT(*) AS n
+                         FROM portfolio
+                         GROUP BY Exited")
+
+data5 = dbGetQuery(con, "SELECT Gender, COUNT(*) AS n
+                         FROM portfolio INNER JOIN profile
+                         ON portfolio.CustomerId = profile.CustomerId
+                         WHERE Exited = 0
+                         GROUP BY Gender")
+
+data6 = dbGetQuery(con, "SELECT Gender, COUNT(*) AS n
+                         FROM portfolio INNER JOIN profile
+                         ON portfolio.CustomerId = profile.CustomerId
+                         WHERE Exited = 1
+                         GROUP BY Gender")
+
+final_exited = dbGetQuery(con, "SELECT Exited, Gender, Age, EstimatedSalary, Tenure, 
+                          Balance, NumOfProducts, HasCrCard, CreditScore
+                          FROM profile INNER JOIN portfolio 
+                          ON profile.CustomerId = portfolio.CustomerId
+                          GROUP BY profile.CustomerId
+                          HAVING Gender = 'Female' AND Age > 37 AND CreditScore < 652")
+
+dbDisconnect(con)
+
+final_exited = final_exited %>% mutate_if(is.character, as.factor)
+final_exited$Exited = as.factor(final_exited$Exited)
+final_exited = final_exited %>% select(-Gender)
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Women leave bank more often than men
+
+```{r}
+plot_ly(
+  labels = c("Total", "Did not exit", "Exited", "Female", "Male",
+             "Female ", "Male "),
+  parents = c("", "Total", "Total", "Did not exit", "Did not exit", "Exited", "Exited"),
+  values = c(sum(data4$n), data4$n, data5$n, data6$n),
+  type = 'sunburst',
+  branchvalues = 'total'
+)
+```
+
+
+
+Column {data-width=550}
+-----------------------------------------------------------------------
+
+### Number of products of exited and non-exited clients from the sample
+
+```{r}
+sharedData <- SharedData$new(final_exited)
+bscols(widths = c(NA, 3),
+  plot_ly(sharedData, 
+        x = ~CreditScore, y = ~Age, color = ~as.factor(NumOfProducts), 
+        type = "scatter", 
+        colors = "Set3"),
+  list(
+         filter_checkbox("status", "Status", sharedData, ~Exited),
+         filter_slider("credit score", "Credit Score", sharedData, ~CreditScore),
+         filter_slider("age", "Age", sharedData, ~Age)
+       )
+)
+```
+
+
