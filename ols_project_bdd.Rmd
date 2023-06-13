@@ -1,0 +1,678 @@
+---
+title: "OLS Project"
+author: "Dmitri Bobrikov"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    code_fold: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+## Part 1 
+
+For our study, we took data reflecting the final grade of students in mathematics [among Portuguese schools](https://www.kaggle.com/datasets/dipam7/student-grade-prediction). The data contains many independent variables that show the sociodemographic and school-related characteristics of each student individually. According to a study conducted in Kentucky, it has been proven that sociodemographic factors of students affect their academic performance (Ford, 1957). Thus, based on our data, we wanted to find out which of the factors that are not directly related to school achievements, e.g. grades for midterm exams or failures in lessons, have an impact on the formation of the final annual course grade among students. Furthermore, we wanted to check in the case of Portugal whether the selected factors have the same effect on student performance as was described in several research, or if there is a difference between these effects. 
+
+### Research question
+
+This brings us to our research question:
+
+**How sociodemographic and social factors influence the final grade for a math course among Portugal students?**
+
+In our case, sociodemographic factors include age, gender, those factors that represent social-economic status (SES) of the parents, etc. While social factors are those that reflect social interactions with peers such as involvement in a romantic relationship and the presence of hangouts with friends.
+
+After conducting statistical significance tests with our independent variables (we will come back to this statement in Part 3 with code), we identified some of the variables that have a certain impact on the student's final grade. Among them we observe such factors as: gender and age of respondent, place of residence, education of parents, occupation of the respondents' mother, time spent on the way to school, presence of additional classes, desire to get a higher education, availability of internet access, involvement in a romantic relationship and the presence of hangouts with friends. Therefore, now it is worth justifying why we took these exact variables. To do this, let's turn to literature.
+
+### Literature review and justification
+
+According to research, it has been proven that girls experience less positive emotions in relation to mathematics compared to boys (Rodríguez et al., 2020). However, in contrast to this, studies show that within the framework of academic performance and GPA, girls excel over boys and score higher (Tsaousis & Alghamdi, 2022). With regard to the place of residence of students, it has been proven that in terms of GPA and general academic achievements, individuals living in an urban and rural environment do not differ. However, in the case of specific courses, for example, in a specific study - it was an English course, a group of students living in an urban area outperformed a group from the suburbs in grades (Vickerson, n.d.). In addition, if we consider the place of residence, then depending on it, students spend different time on the way from home to school and back. This also has an impact on academic performance. It was revealed that the more time a student spends on the road between home and school, the more they are negatively affected in their academic achievements in math classes (Pal Baliyan & Khama, 2020).
+
+Another socio-demographic factor important to mention is the family and its influence. One of the important figures who is an authority for children in various spheres of life, including academic life, are their parents. Family educational background and current employment are strong factors that have a significant impact. Academic achievements and successes of parents have a great motivation for children to study, thereby forcing students to study more actively and get good grades. It has been proven that the father's education has a positive effect on the child's GPA. With regard to the education of mothers, no such significant links were identified, however, it was noted that mothers have an influence on other factors, which in turn are related to the education of the child (Nelson, 2009). Thus, one of these factors is the place of employment of the mother. It was revealed that the working status of mothers negatively affects the academic performance of students, the only exception is the teacher's occupation - it has a positive impact on children’s academic achievements (Hoque et al., 2017).
+
+Furthermore, as additional factors, students' academic performance is influenced by receiving extra education for the course: both specially provided by the school and paid educational courses. These classes help students not only to improve their grades, which indicates that in this regard, these lessons have a positive impact on children's academic performance, but also help to maintain the level of knowledge, as well as motivate and help with admission to higher education institutions (Bukaliya, 2019). The last statement brings us to another factor - the desire of students to get a higher education. For many people, it is a well-known fact that when entering higher educational institutions, one of the main indicators of a student's success is his grades at school. According to statistics, about 81% of colleges note the significant importance of the grades of incoming students (“The Role of Grades in College Admissions,” 2020). Thus, the motivation of students to get good grades in classes is partly formed by a potential desire to enter higher education. In turn, the formed motivation allows students to focus on learning strategies that allow them to study more hard, as a result of which this motivation positively correlates with the student's academic success (Kusurkar et al., 2013).
+
+Moreover, we also have social factors. One of them is the romantic relationships of students, more precisely their absence or presence. According to the study, it was proved that those students who had a romantic relationship had better attendance, but their GPA was lower than those who were not in a relationship (Kasagga & Nakijoba, 2020). In addition to romantic relationships, relationships with friends and meetings with them are also taken into account. According to statistics, the more acquaintances and connections a child has, the better their academic performance. Consequently, a well-developed social life has a positive impact on the academic achievements of children (Mehta, 2013).
+
+Last but not least, equipment in the house also plays an important role in the child's academic performance. One of these facilities can be considered Internet access. According to the study, it was found that children who have access to the Internet at home show higher academic success than those who cannot afford this advantage (Amponsah et al., 2022).
+
+In conclusion, we can see that all of the above factors in some way affect the academic performance of children and create differences in grades between them. Each variable has its own effect on students' grades and their academic success, which in turn leads to the future formation of the final grade for the course. However, the studies mentioned above consider each factor separately, but at the same time, in real conditions, these factors act together. It follows from this that we are interested in checking the level of influence of the selected variables on the final examination assessment of students of Portuguese schools, both for comparison with existing research results, and in general to check the overall impact of the selected factors on the assessment of students.
+
+## Part 2
+
+### Description of the data and explanation why OLS regression is suitable for the purposes of the research
+
+The data we have chosen was taken from Kaggle and contains data about student achievement of two Portuguese schools. This dataset contains in total 33 columns, but we won’t need all these variables, we will take only some of them that we will consider appropriate for our research question.
+
+To find variables we can explore with a purpose to answer our question we conducted stat tests for all variables in the dataset and found out that only 13 of them are appropriate for our work (wait until Part 3). Here are the final thirteen: sex, age (these are control variables), address, Medu, Fedu, Mjob, traveltime, schoolsup, paid, higher, internet, romantic, goout. Let’s take a closer look to each of them.
+
+What about types of variables that we have in our chosen dataset? We can refer to binary next variables: sex, address, schoolsup, paid, higher, internet and romantic as all these variables have only two categories whether it is "Yes/No" or "Rural/Urban" as in address variable. We also have variable with several levels such as Mjob. In this variable we have five categories of mother's job. Also we have variables which we can refer to numeric type such as Medu, Fedu, traveltime, goout. 
+
+As our research question is how sociodemographic and social factors affect the final grade of students we can use Linear Regression as the best way to see the relationships between variables and their mutual influence or its absence. The variable of our interest is a numeric variable which we try to predict by using others, so, looks like linear regression fits quite well here.
+
+
+```{r}
+library(foreign)
+library(readr)
+library(dplyr)
+library(gplots)
+
+d = read.csv("~/das2/proj1/student-mat.csv")
+
+d[sapply(d, is.character)] <- lapply(d[sapply(d, is.character)],as.factor)
+
+d[sapply(d, is.integer)] <- lapply(d[sapply(d, is.integer)],as.numeric)
+
+d$Medu = d$Medu + 1
+d$Fedu = d$Fedu + 1
+
+d = d %>% select(c(sex, age, address, Medu, Fedu, Mjob, traveltime, schoolsup, paid, higher, internet, romantic, goout, G3))
+
+head(d)
+```
+
+### Variables descriptions
+
+$Sex$
+
+Let's begin from variable "sex" as it is the first in line.
+
+```{r}
+library(ggplot2)
+ggplot(d, aes( x = sex))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Gender distribution")+
+  theme_classic()
+```
+
+Pretty simple results, we can see that we have approximately the same number of both genders, but anyway there are slightly more females.
+
+$Age$
+
+Next is "age", let's see what we have.
+
+```{r}
+ggplot(d, aes( x = age))+
+  geom_histogram(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Age")+
+  ylab("Count") +
+  ggtitle("Distribution of Age")+
+  theme_classic()
+```
+
+Here we have age from 15 to 22 years old, as we can see the data is right skewed and the largest number of results we have in age 16.
+
+$Address$
+
+What about address variable? We have only two options here "U" for urban areas and "R" for rural.
+
+```{r}
+ggplot(d, aes( x = address))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Area of living")+
+  ylab("Count") +
+  ggtitle("Address distribution")+
+  theme_classic()
+
+```
+
+We have much more results in Urban area, almost three times more than Rural. Guess they are not big fans of countryside.
+
+$Mother's$ $education$
+
+The next one is "Medu" which means Mother's education. This variable has levels of education from "none" to "higher education" which is 1 and 5 categories correspondingly. 
+
+!Notation!
+
+We know that we should have made ordinal variable about levels of education *factor with several levels*, **but** when we have done this, the results were statistically insignificant in regression models. Moreover, we have tried to make this variable binary, however the results were still statistically insignificant, that is why we perceive this variable as numeric.
+
+```{r}
+ggplot(d, aes( x = Medu))+
+  geom_histogram(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Education level")+
+  ylab("Count") +
+  ggtitle("Mother's education")+
+  theme_classic()
+```
+
+As we have almost zero results with "none", 1 level of education, meaning that mostly mothers of those who's data is used in this dataset have finished several grades and most of them have finished higher education.
+
+$Father's$ $education$
+
+Now let's take a look at father's education level. Here we have the same logic again 1 is for "none" level of education and 5 is for "higher education".
+
+!Notation!
+
+We know that we should have made ordinal variable about levels of education *factor with several levels*, **but** when we have done this, the results were statistically insignificant in regression models. Moreover, we have tried to make this variable binary, however the results were still statistically insignificant, that is why we perceive this variable as numeric.
+
+```{r}
+ggplot(d, aes( x = Fedu))+
+  geom_histogram(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Education level")+
+  ylab("Count") +
+  ggtitle("Father's education")+
+  theme_classic()
+```
+
+Here we have different situation. Now, fifth category is not the biggest one, it has gave its way to the third category which is for "secondary education". But the same is for the first category, there is almost none results for "none" level of education. However, here we can probably say that mother's of respondents in general have higher level of education that fathers.
+
+$Mother's$ $job$
+
+We have seen mother's level of education now it's time to take a look at their job. In general we have five categories in this variable: at_home, health, teacher, services and other. Now let's see the distribution. 
+```{r}
+ggplot(d, aes( x = Mjob))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Type of job")+
+  ylab("Count") +
+  ggtitle("Mother's job")+
+  theme_classic()
+```
+
+Can't say that the data is skewed here, but still, we obviously have the "winner" category and it is "other". We can say nothing about this category to be honest, so just take it as a fact. Also, we can say that the lowest number of counts we have in "health" category.
+
+$Travel$ $time$
+
+The next variable is "traveltime" which is not for travelling to other countries but time that is taken for getting from home to school.The variable contains four categories this time from "less than 15 minutes" to "more than an hour".
+
+!Notation!
+
+We know that we should have made ordinal variable with levels of travel time *factor with several levels*, **but** as this variable represents the amount of time (continuous concept) we also have decided to make this variables continuous. 
+
+```{r}
+ggplot(d, aes( x = traveltime))+
+  geom_histogram(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Travel time")+
+  ylab("Count") +
+  ggtitle("Time from home to school")+
+  theme_classic()
+```
+
+The data is definitely right skewed and I am a bit jealous, because most results are in first category, which means that most students spend less than 15 minutes to get to school and the second biggest category is fo those who spend from 15 to 30 minutes. 
+
+$School$ $support$
+
+We have passed through half of our variables, but we still need to see half more. The next is "schoolsup", this variable represent whether student has extra educational support or not.
+
+```{r}
+ggplot(d, aes( x = schoolsup))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Yes or no")+
+  ylab("Count") +
+  ggtitle("Extra educational support")+
+  theme_classic()
+```
+
+The graph shows us that most students in our dataset do not have extra educational support. By this we can assume that mostly students can cope with their educational task by themselves, which could probably mean that their schedule is balanced enough for successful study.
+
+$Paid$ $classes$
+
+The next variable is "paid", it contains information about students having extra paid classes within the course subject. And of course about those who don't have such classes.
+
+```{r}
+ggplot(d, aes( x = paid))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Having extra paid classes")+
+  ylab("Count") +
+  ggtitle("Extra paid classes")+
+  theme_classic()
+```
+
+Here the difference between categories is not so big, only fifty counts approximately. However, we can see that mostly students do not have extra paid classes in their curriculum.
+
+$Higher$ $education$ $desire$
+
+The next variable "higher" is for willingness of student to take higher education: whether they want it or not.
+```{r}
+ggplot(d, aes( x = higher))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Will to take higher education")+
+  ylab("Count") +
+  ggtitle("Desire to take higher education")+
+  theme_classic()
+```
+
+Wow! Looks like almost everyone wants to go further and take higher education. Well, that's praiseworthy.
+
+$Internet$ $access$
+
+Next thing we need to check is internet access at home and we can do it with help from "internet" variable.
+```{r}
+ggplot(d, aes( x = internet))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Access to Internet at home")+
+  ylab("Count") +
+  ggtitle("Acessibility to Internet at home")+
+  theme_classic()
+```
+
+Pretty normal situation for 21st century that most students have access to the Internet at home, I guess nowadays most of us have it almost everywhere. However, there are small amount of students who does not have Internet access at home, but there less than hundred of them.
+
+$Romantic$ $relationships$
+
+We have data even about student's personal life here, let's take a look at the "romantic" variable that contains information about whether student is in a romantic relationship or not.
+```{r}
+ggplot(d, aes( x = romantic))+
+  geom_bar(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Status of romantic relationship")+
+  ylab("Count") +
+  ggtitle("Romantic relationship")+
+  theme_classic()
+```
+
+Guess they do not have much time for relationship as there is almost twice more counts in "no" category. Well, we will see how this fact affect their grades.
+
+$Going$ $out$
+
+Let's take a look at the "go out" variable that contains information about frequency of going out with mates.
+
+```{r}
+ggplot(d, aes( x = goout))+
+  geom_histogram(colour = 1, fill = "lightblue", 
+                 binwidth = 0.2) +
+  xlab("Frequency")+
+  ylab("Count") +
+  ggtitle("Going out with friends")+
+  theme_classic()
+```
+
+First time here we have almost perfect bell-shaped curve. Guess these students have pretty good balance in studying and hanging out with friends, as most counts are in third category and this is the very middle in this variable as first category correspond to "very low" and the fifth to "very high".
+
+$Final$ $grade$
+
+And finally, the last but not the least, "G3" variable that will tell us about final grades distribution, something we are very interested in. In this variable we have scores from 0 to 20.
+
+```{r}
+ggplot(d, aes( x = G3))+
+  geom_histogram(colour = 1, fill = "lightblue") +
+  xlab("Grade")+
+  ylab("Count") +
+  ggtitle("Final grades distribution")+
+  theme_classic()
+```
+
+An unusual results here. We could have said that this is almost bell-shaped curve if we did not have this sort of outcast - 0 grade. Also, we have a gap between 0 and 4, we have no results in 1,2,3 which is probably good as it is quite low results and a good thing to see is that mostly grades are in right part of scale, meaning 10 and more. In summary, they have good grades. Maybe not excellent results, but still good.
+
+
+## Part 3 & 4
+### Statistical tests
+
+As we have mentioned in the Part 1, we have conducted statistical tests with our independent variables. Let's take a closer examination of the tests results. 
+
+$Sex$
+
+As the sex is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among boys and girls in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$sex) 
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.03958) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among boys and girls in terms of final score*. Moreover, based on output we can conclude that *boys have higher score on average in comparison with girls*.
+
+$Age$
+
+As the age and the grade are both numeric variables we should conduct $cor-test$.
+*Null hypothesis*: there is no relationship between age and grade that the person has
+
+```{r}
+cor.test(d$age, d$G3) 
+```
+
+We obtained p-value that is less than 0.05 (it is 0.001271) that is why we can reject our null hypothesis. So, *there is the statistically significant relationship between age and grade* that the person has. Besides, based on the output (correlation coefficient equals to -0.16) we can conclude that the relationship is negative (the older the person is the lower the grade is) and weak (due to 0.16).
+
+$Address$
+
+As the address is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among students who live in urban and rural areas in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$address)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.03661) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who live in urban and rural areas in terms of final score*. Moreover, based on output we can conclude that *children who live in urban area have higher score on average in comparison those who live in rural area*.
+
+$Mother's$ $education$
+
+As the mother's education level and the grade are both numeric variables we should conduct $cor-test$.
+*Null hypothesis*: there is no relationship between mother's education level and grade that the person has
+
+```{r}
+cor.test(d$Medu, d$G3) 
+```
+
+We obtained p-value that is less than 0.05 (it is 1.336e-05) that is why we can reject our null hypothesis. So, *there is the statistically significant relationship between mother's education level and grade* that the person has. Besides, based on the output (correlation coefficient equals to 0.22) we can conclude that the relationship is positive (the higher mother's education is the higher the grade is) and weak (due to 0.22).
+
+$Father's$ $education$
+
+As the father's education level and the grade are both numeric variables we should conduct $cor-test$.
+*Null hypothesis*: there is no relationship between father's education level and grade that the person has
+
+```{r}
+cor.test(d$Fedu, d$G3) 
+```
+
+We obtained p-value that is less than 0.05 (it is 0.00238) that is why we can reject our null hypothesis. So, *there is the statistically significant relationship between father's education level and grade* that the person has. Besides, based on the output (correlation coefficient equals to 0.15) we can conclude that the relationship is positive (the higher father's education is the higher the grade is) and weak (due to 0.15).
+
+$Mother's$ $job$
+
+Here we should conduct $anova$ because the grade is a numeric variable and the mother's job has more than 2 levels (it has 5). 
+*Null hypothesis*: there is no difference among students with different mother's jobs means in terms of the grade.
+
+```{r}
+summary(aov(d$G3 ~ d$Mjob)) 
+plotmeans(G3 ~ Mjob, data = d, 
+          xlab = "Mjob", ylab = "G3",
+          main="Mean Plot with 95% CI") 
+```
+
+We have got the p-value that is less than 0.05 (it is 0.00519) that is why we can reject our null hypothesis. So, *there is the statistically significant difference among students with different mother's jobs means in terms of the grade*. Moreover, we can see on the plot that the highest grade on average obtain those students whose mothers work in health occupations.
+
+$Travel$ $time$
+
+As the travel time and the grade are both numeric variables we should conduct $cor-test$.
+*Null hypothesis*: there is no relationship between travel time and grade that the person has
+
+```{r}
+cor.test(d$traveltime, d$G3) 
+```
+
+We obtained p-value that is less than 0.05 (it is 0.01987) that is why we can reject our null hypothesis. So, *there is the statistically significant relationship between travel time and grade* that the person has. Besides, based on the output (correlation coefficient equals to -0.12) we can conclude that the relationship is negative (the higher the travel time is the lower the grade is) and weak (due to 0.12).
+
+$School$ $support$
+
+As the school support is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among students who have and do not have extra educational support in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$schoolsup) 
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.01974) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who have and do not have extra educational support in terms of their final score*. Moreover, based on output we can conclude that *those students who have extra educational support have on average lower final grade comparing to those students who do not have extra educational support*, that is quite strange as this support should help but it does not...
+
+$Paid$ $lessons$
+
+As the paid is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among students who have and do not have extra paid classes in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$paid) 
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.0379) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who have and do not have extra paid classes in terms of their final score*. Moreover, based on output we can conclude that *those students who have extra paid classes have on average higher final grade comparing to those students who do not have extra paid classes*.
+
+$Higher$ $education$ $desire$
+
+As the higher education desire is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among students who have and do not have desire to obtain higher education in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$higher) 
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.00244) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who have and do not have desire to obtain higher education in terms of their final score*. Moreover, based on output we can conclude that *those students who have desire to obtain higher education have on average higher final grade comparing to those students who do not have desire to obtain higher education*.
+
+$Internet$ $access$
+
+As the internet access is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among students who have and do not have internet access in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$internet) 
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.04955) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who have and do not have internet access in terms of their final score*. Moreover, based on output we can conclude that *those students who have internet access have on average higher final grade comparing to those students who do not have internet access*.
+
+$Romantic$ $relationships$
+
+As the romantic relationship is a binary variable and the score is a numeric variable we should conduct $t-test$.
+*Null hypothesis:* there is no statistically significant difference among students who have and do not have romantic relationships in terms of their final score
+
+```{r}
+t.test(d$G3 ~ d$romantic) 
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.01266) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who have and do not have romantic relationships in terms of their final score*. Moreover, based on output we can conclude that *those students who have romantic relationships have on average lower final grade comparing to those students who do not have romantic relationships*.
+
+$Going$ $out$
+
+Here we should conduct $anova$ because the grade is a numeric variable and the going out frequency has more than 2 levels (it has 5). 
+*Null hypothesis*: there is no difference among students with different going out frequency means in terms of the grade.
+
+```{r}
+summary(aov(d$G3 ~ d$goout)) 
+plotmeans(G3 ~ d$goout, data = d, 
+          xlab = "goout", ylab = "G3",
+          main="Mean Plot with 95% CI")
+```
+
+We have got the p-value that is less than 0.05 (it is 0.0144 ) that is why we can reject our null hypothesis. So, *there is the statistically significant difference among students with different going out frequency means in terms of the grade*. Moreover, we can see on the plot that the highest grade on average obtain those students go out with frequency 2 and 3 (medium and lower). So, let's recode this variable
+
+We will divide students into 2 groups: those who often go out (levels 4 and 5) and the opposite groups (levels 1, 2 and 3). Let's conduct t-test
+
+```{r}
+d$go = as.numeric(d$goout)
+d$go_rec = ifelse(d$go <= 3, "rare", "often")
+
+d$go_rec = as.factor(d$go_rec)
+t.test(d$G3 ~ d$go_rec)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.001637) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among students who often go out and not so often in terms of their final score*. Moreover, based on output we can conclude that *those students who often go out have on average lower final grade comparing to those students who do not often go out*. In the model we will use binary variable *go_rec*
+
+### Linear regression model
+
+Let us create the regression model step by step. The best model will be interpreted thoroughly in the next section.
+
+Firstly, let's start with adding control variables (sex and age).
+
+```{r}
+m0 = lm(G3 ~ age + sex, data = d)
+summary(m0)
+```
+
+Our control variables are statistically significant as p-values are less than 0.05, that's great! However, adjusted r-squared is only 3% that is pretty bad :(
+
+Now we will add continuous predictors.
+
+```{r}
+m1 = lm(G3 ~ age + sex + Medu + Fedu + traveltime, data = d)
+summary(m1)
+```
+
+Well, father's education level, sex and travel time are not statistically significant in our model (as p-values are higher than 0.05), but mother's education level and age are statistically significant. Also, adjusted R-squared is small and equals about 6% that is not good
+
+Let's add categorical predictors and see whether our initial model will be improved or not.
+
+```{r}
+m2 = lm(G3 ~ age + sex + Medu + Fedu + traveltime + address + Mjob + schoolsup + paid + higher + internet + romantic + go_rec, data = d)
+summary(m2)
+```
+
+So, we have many variables that are not statistically significant such as age, Fedu, traveltime, address, Mjob, paid, internet (as p-values are more than 0.05) while others are statistically significant. Also, adjusted R-squared equals 0.1238 that is better than in the previous model
+
+Let's try to delete statistically insignificant predictors
+
+```{r}
+m3 = lm(G3 ~ age + sex + Medu + schoolsup + higher + romantic + go_rec, data = d)
+summary(m3)
+```
+
+Though age and sex are not statistically significant as p-values are more than 0.05 but not dramatically, others predictors are statistically significant. However, adjusted R-squared equals 0.1185 that is less than in the second model. 
+
+Let's compare the second and the third models with anova.
+
+```{r}
+anova(m2, m3)
+```
+
+Based on the results, we will stick to the second model as the final one
+
+### Interpretation of the final model
+
+Let's recall the output of the model
+
+```{r}
+summary(m2)
+```
+
+1) The female student who does not have extra school support, does not desire to get a higher education, does not have romantic relationship, does not go out often and whose mother has 0 level of education, will get on average the final grade on math that equals approximately 10 (in other words will be equal to intercept that is statistically significant as p-value is less than 0.05)
+
+2) With each increase in one point of the mother's education level the final grade will be increased on 0.66 on average and this is statistically significant (because p-value is less than 0.05).
+
+3) If the person is a male here will be an increase in the final grade on 1.06 on average compared to females and this is statistically significant (because p-value is less than 0.05)
+
+4) If the student has extra educational support here will be a decrease in the final grade on 1.36 on average compared to those who does not have extra educational support and this is statistically significant (because p-value is less than 0.05)
+
+5) If the student has a desire to get higher education here will be an increase in the final grade on 2.62 on average compared to those who does not desire to get higher education and this is statistically significant (because p-value is less than 0.05)
+
+6) If the student has a romantic relationship here will be a decrease in the final grade on 1.11 on average compared to those who does not have a romantic relationship and this is statistically significant (because p-value is less than 0.05)
+
+7) If the student rarely goes out with peers here will be an increase in the final grade on 1.60 on average compared to those who go out often and this is statistically significant (because p-value is less than 0.05)
+
+### Diagnostics of the model
+
+In this section we will cover the diagnostics of the final model. 
+
+#### Linearity
+
+We will check the linearity with boxcox function. As boxcox function does not work with 0 values in data, we will add 1 point to final grade to each student so there are no zeroes (this opperation does not influence the model results itself). That is why we have to run new model for this boxcox function
+
+```{r}
+library(nortest)
+library(olsrr)
+library(MASS)
+library(car)
+d_boxcox = d %>% mutate(G3 = G3 + 1)
+m2_boxcox = lm(G3 ~ age + Medu + Fedu + traveltime + sex + address + Mjob + schoolsup + paid + higher + internet + romantic + go_rec, data = d_boxcox)
+boxcox(m2_boxcox)
+```
+
+Great news! Lambda is closer to 1 that is why no transformation with linearity is needed here.
+
+#### Residual's distribution
+
+Let's run Shapiro-Wilk test to check residual's distribution
+
+```{r}
+ols_test_normality(m2)
+```
+
+Shapiro-Wilk p-value is less than 0.05 - data are not normal
+
+Let's take a look on the plot
+
+```{r}
+car::qqPlot(m2, main="Q-Q Plot")
+```
+
+Yes, we indeed have not normal residual's distribution.
+
+
+#### Outliers - Leverages
+
+Let's take a look on outlier test.
+
+```{r}
+outlierTest(m2, n.max = 10)
+```
+
+"No Studentized residuals with Bonferroni p < 0.05" is great as it shows that there are no problematic observations 
+
+However, let's see whether we have some leverages
+
+```{r}
+plot(hatvalues(m2), rstudent(m2), type='n')
+abline(h=c(-2, 2), lty=2, col = 'red', lwd =2)
+#thresholds for leverages
+abline(v=3*14/395, lty=2, col = 'red', lwd =2)
+cook <- sqrt(cooks.distance(m2))
+points(hatvalues(m2), rstudent(m2), cex=10*cook/max(cook))
+text(hatvalues(m2), rstudent(m2), rownames(d))
+```
+
+We can see some problematic cases beyond our limits, but there are not so many of them, so this is fine.
+
+#### Heteroscedasticity
+
+*Null hypothesis:* homoscedasticity is in our residuals. We will check it with Breusch-Pagan test
+
+```{r}
+car::ncvTest(m2)
+```
+
+As p-value is more than 0.05, we can not reject our null hypothesis. That's great because we have homoscedasticity that is needed by us.
+
+#### Multicollinearity
+
+Let's check multicollinearity based on GVIF
+
+```{r}
+car::vif(m2)
+```
+
+GVIF for each variable is less than 4, so there is no multicollinearity.
+
+#### Antidotes
+
+We can apply second power to the target variable to fix the residual's distribution.
+```{r}
+m2_sq = lm((G3)^2 ~ age + Medu + Fedu + traveltime + sex + address + Mjob + schoolsup + paid + higher + internet + romantic + go_rec, data = d)
+#summary(m2_sq)
+car::qqPlot(m2_sq, main="Q-Q Plot")
+```
+
+Cool! It looks now better!
+
+Also, let's see how the summary of the improved model looks like.
+
+```{r}
+summary(m2_sq)
+```
+
+We can see that we have the same statistically significant predictors, but values are different that is expected because we squared the dependent variable. What is good is than adjusted R-squared is 0.1524 now that is better than it has been.
+
+## Conclusions
+
+It's time to make some conclusions. Interestingly, we have obtained results that tell us that "being a sociable extrovert" (having romantic relationships and going out with mates often) negatively influences on one's final grade on math! At the same time one's SES (including mother's education level, possibility to pay for extra school support and desire to have a higher education) increases one's grades!
+
+So, if you want to have higher grades, just sit at home, do not communicate with others, have a mom with higher education and opportunities to pay for your extra classes 
+
+## References
+
+- Amponsah, K. D., Aboagye, G. K., Narh-Kert, M., Commey-Mintah, P., & Boateng, F. K. (2022). The Impact of Internet Usage on Students’ Success in Selected Senior High Schools in Cape Coast metropolis, Ghana. European Journal of Educational Sciences, 9(2), 1–18. https://doi.org/10.19044/ejes.v9no2a1
+- Bukaliya, R. (2019). Extra Lessons and Academic Achievement of Learners among Urban Day High Density Secondary School Learners. International Journal of Educational Studies, 2(3), 136–150. https://doi.org/10.53935/2641-533x.v2i3.116
+Ford, T. R. (1957). Social Factors Affecting Academic Performance: Further Evidence. The School Review, 65(4), 415–422. https://doi.org/10.1086/442410
+- Hoque, M., Khanam, S. T., & Nobi, M. N. (2017). The Effects of Mothers’ Profession on their Children’s Academic Performance: An Econometric Analysis The Effects of Mothers’ Profession on their Children’s Academic Performance: An Econometric Analysis. Global Journal of HUMAN-SOCIAL SCIENCE: E Economics, 17(2).
+- Kasagga, U., & Nakijoba, S. (2020). Effect of Romantic Relationship on Undergraduate Students’ Academic Performance: A Case Study of Islamic University in Uganda. Islamic University Multidisciplinary Journal, 7.
+- Kusurkar, R. A., Ten Cate, Th. J., Vos, C. M. P., Westers, P., & Croiset, G. (2013). How motivation affects academic performance: A structural equation modelling analysis. Advances in Health Sciences Education, 18(1), 57–69. https://doi.org/10.1007/s10459-012-9354-3
+- Mehta, A. (2013, September 12). How Friends Influence Your Child’s Grades. Educational Connections.
+- Nelson, J. K. (2009). Impact of Parent Education on Student Success. ERIC.
+- Pal Baliyan, S., & Khama, D. (2020). How Distance to School and Study Hours after School Influence Students’ Performance in Mathematics and English: A Comparative Analysis. Journal of Education and E-Learning Research, 7(2), 209–217. https://doi.org/10.20448/journal.509.2020.72.209.217
+- Rodríguez, S., Regueiro, B., Piñeiro, I., Estévez, I., & Valle, A. (2020). Gender Differences in Mathematics Motivation: Differential Effects on Performance in Primary Education. Frontiers in Psychology, 10, 3050. https://doi.org/10.3389/fpsyg.2019.03050
+- The Role of Grades in College Admissions. (2020, September 30). Collegiate Gateway.
+- Tsaousis, I., & Alghamdi, M. H. (2022). Examining academic performance across gender differently: Measurement invariance and latent mean differences using bias-corrected bootstrap confidence intervals. Frontiers in Psychology, 13, 896638. https://doi.org/10.3389/fpsyg.2022.896638
+- Vickerson, T. L. (n.d.). The Impact of Place of Residence on the Academic Achievement and Retention of First-Time-in-College Students at an Urban Commuter University [Old Dominion University Libraries]. https://doi.org/10.25777/VD0R-5Q51
+
+

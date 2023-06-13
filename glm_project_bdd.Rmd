@@ -1,0 +1,654 @@
+---
+title: "GLM Project"
+author: "Dmitri Bobrikov"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    code_fold: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, error = F, warning = F)
+```
+
+
+## Part 1
+
+For this project, we decided to take the data that contains HR analytics about employees. Our data shows a huge number of individual’s characteristics - from socio economic factors to related to the professional sphere ones. The main dependent variable in this case is employee attrition, since the purpose of this data is to identify factors affecting the outflow of employees from the company. According to statistics, in 2022 in Russia 3.24 million people left large and medium-sized enterprises and the number of dismissals in labor market turned out to be a record for at least the last 10 years (“Трудовой Передел: В России Установлен Рекорд По Увольнениям и Найму Работников,” 2022). This raises the problem of labor outflow in the labor market, which is a serious issue for HR specialists. In order to avoid possible losses in the work team, HR department employees can begin to conduct analytics in order to understand employees with what specific factors are more likely to leave their position.Thus, the purpose of our project is to analyze the available data and understand what social and professional factors influence the attrition of employees in the company. This brings us to our research question:
+
+**What socio economic and professional factors of employees influence the attrition rate?**
+
+After conducting statistical significance tests with our independent variables, we identified some of the variables that have a certain impact on attrition of the workers. Among those there are such factors as:
+
+* Monthly income of an employee
+
+* Employee’s level of job satisfaction
+
+* Employee’s level of satisfaction by environment in organization
+
+* Frequency of employee travels for business purpose
+
+* Importance of work-life balance for an employee
+
+* Whether an employee works over time
+
+* Education field of an employee
+
+* Job role of an employee
+
+* Total years spent by an employee in current company
+
+* Marital status of an employee
+
+* Distance from home to office in km
+
+Now let’s consider each of these factors using scientific literature.
+According to research, it has been proven that monthly income is one of the most important factors that influence employee attrition. The greater the amount of monthly income, the less are the chances of worker attrition (Raza et al., 2022). This is not really a surprising fact, since due to statistics, salary according to employees is one of the most popular motivating factors. About 42% of the people surveyed noted that the monetary component increases their level of motivation (Quiambao, 2021). 
+
+In addition to money issues, job satisfaction also plays an important role in the outflow of workers. It was revealed that almost half of the employees in organizations are of the opinion that their work is not appreciated by their bosses, they lack social recognition. This, in turn, greatly affects job satisfaction, which in turn, with insufficient recognition, increases the outflow of labor from the company (Gaurav, 2010). However, job satisfaction is formed not only from the recognition of employees by supervisors. It is also influenced by the environment in the company. It is proved that a good environment of the organization positively affects job satisfaction, and, consequently, reduces attrition rate (Kurniawaty et al., 2019).
+
+Furthermore, another factor affecting the presence of employees in the company is business trips. It can be assumed that frequent business trips can be repulsive for employees, however, according to the article, the presence of business trips has the opposite effect for the outflow of employees. In this regard, business trips on the contrary attract and retain talented employees (Stratford, 2018).
+
+Also, one of the rather important factors for the outflow of workers is adequate compliance with the work schedule. This section includes both compliance with work-life balance and the availability of overtime. According to the survey, about 80% of employees claim that they are more loyal to the company if they are given a flexible schedule that maintains a balance between work and personal life. In turn, loyalty to the company reduces attrition (“The Importance of a Work-Life Balance in an Employee Retention Strategy,” 2022). Also a component part of unhealthy work-life balance is overwork and long working hours - these characteristics, if they are present at work, increase the outflow of employees from the organization (Lata, 2023).
+
+Moreover, there are different trends in the outflow of workers depending on industries and work roles. Thus, the highest turnover rates are observed in technology, media and sales sphere. As for roles, high-qualified specialists, e.g. marketing ones, are more likely to dismiss the job than statistically average sector employees (Chiradeep, 2021).
+
+With regard to the years spent in the company, there is no clear proven trend reflecting the dependence of layoffs on work experience. However, statistics show that in the first years of the company's presence, the outflow of personnel is pretty high, but over time it gradually decreases (Raza et al., 2022). Probably, in this regard, the development of loyalty in the company over the years spent in it works, which has a positive effect on staying in the company.
+
+If we mention characteristics that are not directly related to the professional sphere, then the marital status of an employee will be one of them. Surprisingly, this factor has an impact on attrition rate. It is proved that marital status increases the outflow of workers - married employees are more likely to leave a job than single ones (Wenger & Hodari, 2004). Also a factor other than professional is the distance between the employee's home and the office. Surprisingly, the results of research showed that the lesser the distance between home and office place, the higher the attrition rate (Ong, 2021).
+
+In conclusion, we can see that each of these factors somehow affects the attrition rate in organizations. Thus, in the case of our data, we want to find out whether the trends of employee outflow coincide with those mentioned above, as well as what impact each of the factors has on the attrition.
+
+
+## Part 2
+
+```{r}
+library(foreign)
+library(readr)
+library(dplyr)
+library(gplots)
+
+d = read.csv("~/das2/HR-Employee-Attrition.csv")
+
+d[sapply(d, is.character)] = lapply(d[sapply(d, is.character)],as.factor)
+
+d = d %>% select(Attrition, BusinessTravel, MonthlyIncome, WorkLifeBalance, MaritalStatus, EducationField, YearsAtCompany, OverTime, JobSatisfaction, DistanceFromHome, EnvironmentSatisfaction, JobRole)
+```
+
+### Description
+
+So, after conducting statistical tests and analyzing corresponding scientific literature our list of variables looks like this: Attrition, BusinessTravel, MonthlyIncome, WorkLifeBalance, MaritalStatus, EducationField, YearsAtCompany, OverTime, JobSatisfaction, DistanceFromHome, EnvironmentSatisfaction, JobRole. In general this dataset from Kaggle that we have chosen for our work contains 35 variables from which we took only 12. This dataset was published on the website by Rushikesh Konapure and Pranav Uikey. Units of analysis here are workers in one Indian company. Let's take a closer look at our chosen variables.
+
+### Attrition level
+
+```{r}
+library(ggplot2)
+ggplot(d, aes( x = Attrition))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Attrition level")+
+  theme_classic()
+```
+
+As we can see here the attrition level is not very high, actually it's rather low as the number in "Yes" category is approximately only 200 counts. Still there is this number of those who decided to leave, therefore there's got to be a reason why they left which we will try to find.
+
+### Frequency of employee travels for business purpose
+
+```{r}
+library(ggplot2)
+ggplot(d, aes( x = BusinessTravel))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Travels for business purpose")+
+  theme_classic()
+```
+
+Travels are not the usual thing for respondents in this dataset, the biggest number is in "Travel Rarely category" which is good as, according to our literature review, business trips could have a positive impact on employees, could attract and retain talented workers inside a company.
+
+### Monthly income of an employee
+
+```{r}
+ggplot(d, aes( x = MonthlyIncome))+
+  geom_histogram(colour = 1, fill = "lightblue", 
+                 binwidth = 200) +
+  xlab("Type of job")+
+  ylab("Count") +
+  ggtitle("Monthly income of an employee")+
+  theme_classic()
+```
+
+There is a huge difference in counts between those who get more than 10000 a month and those who receive less than 5000. Now we can assume that this could be one of the most important factors that influence attrition level as, again, according to literature review monthly income is one of the most important factors.
+
+### Importance of work-life balance for an employee
+
+```{r}
+library(ggplot2)
+ggplot(d, aes( x = WorkLifeBalance))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Work-Life balance")+
+  theme_classic()
+```
+
+What can we say about work-life balance? Maybe it is not extremely important, but still very much appreciated by employees. Here we can also say that people probably are much less stressful when they can manage distribution their time between work and personal life. 
+
+### Marital status of an employee
+
+```{r}
+ggplot(d, aes( x = MaritalStatus))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Marital status of an employee")+
+  theme_classic()
+```
+
+The biggest category as we can see is "Married", next is "Single" and the least one is "Divorced". As we can remember from the Part 1 marital status has an impact on attrition rate mostly in case of married workers - they are more likely to leave their job than single ones, so maybe we will see some correlation here. 
+
+### Education field of an employee
+
+```{r}
+ggplot(d, aes( x = EducationField))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Education field of an employee")+
+  theme_classic()
+```
+
+Now we can see the distribution of different educational fields among respondents of the dataset. Most counts we have in "Life Science" and "Human Resources" has the least number of counts. We have almost nothing for education in our literature review, thus we can assume only blindly. For example we can say that the dataset contains most counts in "Life Sciences" and "Medical" because those are difficult and require special knowledge and high qualified specialists with experience.
+
+### Total years spent by an employee in current company
+
+```{r}
+ggplot(d, aes( x = YearsAtCompany))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Total years in company")+
+  theme_classic()
+
+```
+
+Here we mostly have results from 0 to 10, there much more counts than in all other categories. Years spent in company could actually be quiet important factor for attrition level as large number of years spent in one company increase loyalty of an employee and decrease the probability of his retiring. Thus, such large number of counts in less than 10 years in company with largest number in 5 years could be a bad sign.
+
+### Whether an employee works over time
+
+```{r}
+ggplot(d, aes( x = OverTime))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Working over time")+
+  theme_classic()
+```
+
+Mostly we have "No" results which is good as working over time is actually one of important factors as we already mentioned. Working over time does not help to create healthy work-life balance and we said before that this is important for people to have an opportunity to live their own lives. Less working over time level - less stress for employees in the company.
+
+### Employee’s level of job satisfaction
+
+```{r}
+ggplot(d, aes( x = JobSatisfaction))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Level of job satisfaction")+
+  theme_classic()
+```
+
+Here we have approximately the same results between first and second category and between third and fourth. Mostly counts are in the third and fourth category, but numbers in first and secind categories are still high, they are not very far from further categories. Guess we can say that the number of those who is not very satisfied with their job is high enough for company to think what can be done, otherwise it could affect the attrition level, because employees need to feel that their work is important and appreciated.
+
+### Distance from home to office in km 
+
+```{r}
+ggplot(d, aes( x = DistanceFromHome))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Distance from home")+
+  theme_classic()
+```
+
+What can we say here, mostly people live close to their place of work, good for them. However, even thought the "Distance from home" is not one of the most important factors it still could have an impact and the less this number is the higher probability of attrition. So, good for employees, bad for company. Or maybe not, we'll see it further.
+
+### Employee’s level of satisfaction by environment in organization
+
+```{r}
+ggplot(d, aes( x = EnvironmentSatisfaction))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Satisfaction by environment in organization")+
+  theme_classic()
+```
+
+Environment in organization sounds like an important factor for employees, who wants to leave company where you feel comfortable and welcomed. Good news, here we have most counts in the third and fourth category, which means that people are mostly satisfied by the atmosphere at their working place.
+
+### Job role of an employee
+
+```{r}
+ggplot(d, aes( x = JobRole))+
+  geom_bar(colour = 1, fill = "lightblue") +
+  xlab(" ")+
+  ylab("Count") +
+  ggtitle("Job role of an employee")+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  theme_classic()
+```
+
+We've got almost a list of roles, top three are "Research Scientist", "Sales Executive" and "Laboratory Technician". What can we say here, high qualified specialist is good to have, but easy to lose as he probably will have many offers.
+
+Finally, let's summarize everything we discussed above in one place and see what are the differences between attired and not attired workers.
+
+```{r}
+library(table1)
+table1::label(d$Attrition) = "Attrition"
+table1::label(d$BusinessTravel) = "Travels for business purpose"
+table1::label(d$MonthlyIncome) = "Monthly income"
+table1::label(d$WorkLifeBalance) = "Work-Life balance"
+table1::label(d$MaritalStatus) = "Marital status"
+table1::label(d$EducationField) = "Education field"
+table1::label(d$YearsAtCompany) = "Years spent in company"
+table1::label(d$OverTime) = "Working over time"
+table1::label(d$JobSatisfaction) = "Level of job satisfaction"
+table1::label(d$DistanceFromHome) = "Distance from home to work"
+table1::label(d$JobRole) = "Job role of an employee"
+
+table1(~ BusinessTravel + MonthlyIncome + WorkLifeBalance + MaritalStatus + EducationField + YearsAtCompany + OverTime + JobSatisfaction +DistanceFromHome + JobRole|Attrition, data=d)
+```
+
+Now we can see the difference between those who quit and those who stayed clearly. Some of our theories we can confirm now. For example, we said that business trips affect employee's decision to quit negatively, meaning more business trips less desire to quit. Here we can see that there are much more those who have business trips in "No" attire category, so probably this did affect the attrition level.
+Same thing we can say about monthly income. Those who did not attire have higher salary, than those who did. As we already mentioned, monthly income is one of the most important categories in our question.
+Work-life balance does not differ much, still it's a bit higher in "No" category.
+Percentage of those who is married is higher in "No" category and in "Yes" category we can see more of those who is single.
+Remember what have we said about years spent in company? The probability of attrition among those who spent many years in one place is lower and if we take a look at the table we will see that those who did not quit have larger number of years spent in company.
+Working over time seems obvious too, look at these numbers. In "No" category those who did not work over time make up the majority, almost 77%. And in "Yes" category the difference is not that large but still there are more those who did work over time.
+Level of job satisfaction does also not differ much, the mean value is slightly higher of those who did not quit.
+However in "Distance from home" variable we might be wrong as we have said that the less this distance is the higher probability of attrition and here we can see that the mean value is lower in "No" category. So, here we can say that maybe the less distance from home affected positively on attrition level and made employees stay.
+The last one is "Job role of an employee" and let's see what do we have here. Looks like our top-3 occupations in overall are the top-3 in "Yes" Attrition category. Maybe our theory was right and high qualified specialists in these occupations have many offers and are easy to lose for company.
+
+### Why BLR regression is suitable for the purposes of the research? 
+
+What we want to see here is what affect the attrition level and attrition here is binary variable, so we can not use our familiar linear regression. Of course we can transform our data of interest into numeric variable, then the would apply different strategy. However there is a way to find answers by working with what we already have, thus, let's try Binary logistic regression.
+
+## Part 3 & 4
+### Statistical tests
+
+As we have mentioned in the Part 1, we have conducted statistical tests with our independent variables. Let's take a closer examination of the tests results. 
+
+$Business$ $travel$ $frequency$
+
+As the variable about business travel frequency and the variable about attrition are **both factor**, we need to conduct chi-square test.
+
+*Our null hypothesis*: there is no relationship between attrition and business travel frequency. 
+
+
+```{r}
+chisq.test(d$Attrition, d$BusinessTravel)
+```
+
+Output tells us that p-value is less than 0.05 (it is 5.609e-06) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among groups*. However, we can not tell the exact difference between groups, based on the output, that is why we need to check standardized residuals.
+
+```{r}
+chisq.test(d$Attrition, d$BusinessTravel)$stdres
+```
+
+We can see that people who frequently travel for business purposes in the company tend to attire.
+
+$Monthly$ $Income$
+
+As monthly income is numeric and attrition is factor with 2 levels we need to conduct t-test to check the relationship.
+
+*Our null hypothesis*: there is no statistically significant difference among attired and non-attired in terms of their monthly income
+
+```{r}
+t.test(d$MonthlyIncome ~ d$Attrition)
+```
+
+Output tells us that p-value is less than 0.05 (it is 4.434e-13) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among attired and non-attired in terms of their monthly income*. Moreover, based on output we can conclude that *attired workers have lower income on average in comparison with non-attired*.
+
+$Work-life$ $balance$
+
+As work-life balance scale is numeric and attrition is factor with 2 levels we need to conduct t-test to check the relationship.
+
+*Our null hypothesis*: there is no statistically significant difference among attired and non-attired in terms of their work-life balance
+
+```{r}
+t.test(d$WorkLifeBalance ~ d$Attrition)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.03047) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among attired and non-attired in terms of work-life balance*. Moreover, based on output we can conclude that *attired workers have lower work-life balance value (they suffer more from work than enjoy their lives) on average in comparison with non-attired*.
+
+$Marital$ $Status$
+
+As the marital status and the variable about attrition are **both factor**, we need to conduct chi-square test.
+
+*Our null hypothesis*: there is no relationship between attrition and marital status. 
+
+```{r}
+chisq.test(d$Attrition, d$MaritalStatus)
+```
+
+Output tells us that p-value is less than 0.05 (it is 9.456e-11) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among groups*. However, we can not tell the exact difference between groups, based on the output, that is why we need to check standardized residuals.
+
+```{r}
+chisq.test(d$Attrition, d$MaritalStatus)$stdres
+```
+
+We can see that divorced and married workers do not tend to attire compared to single workers.
+
+$Education$ $Field$
+
+As the education fields and the variable about attrition are **both factor** , we need to conduct chi-square test.
+
+*Our null hypothesis*: there is no relationship between attrition and education field. 
+
+```{r}
+chisq.test(d$Attrition, d$EducationField)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.006774) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among groups*. However, we can not tell the exact difference between groups, based on the output, that is why we need to check standardized residuals.
+
+```{r}
+chisq.test(d$Attrition, d$EducationField)$stdres
+```
+
+We should consider those levels that have values more than 2 by modulus. We can see that Marketing and Technical Degree tend to attire. 
+
+$Years$ $At$ $Company$
+
+As years at company is numeric and attrition is factor with 2 levels we need to conduct t-test to check the relationship.
+
+*Our null hypothesis*: there is no statistically significant difference among attired and non-attired in terms of their time spent in company in years
+
+```{r}
+t.test(d$YearsAtCompany ~ d$Attrition)
+```
+
+Output tells us that p-value is less than 0.05 (it is 2.286e-07) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among attired and non-attired in terms of their time spent in company in years*. Moreover, based on output we can conclude that *attired workers have lower time spent in company in years on average in comparison with non-attired*.
+
+$Overtime$
+
+As the overtime and the variable about attrition are **both factor** , we need to conduct chi-square test.
+
+*Our null hypothesis*: there is no relationship between attrition and overtime. 
+
+```{r}
+chisq.test(d$Attrition, d$OverTime)
+```
+
+Output tells us that p-value is less than 0.05 (it is < 2.2e-16) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among groups*. However, we can not tell the exact difference between groups, based on the output, that is why we need to check standardized residuals.
+
+```{r}
+chisq.test(d$Attrition, d$OverTime)$stdres
+```
+
+We can see that workers who face with overtime tend to attire. 
+
+$Job$ $Satisfaction$
+
+As job satisfaction level is numeric and attrition is factor with 2 levels we need to conduct t-test to check the relationship.
+
+*Our null hypothesis*: there is no statistically significant difference among attired and non-attired in terms of their job satisfaction level
+
+```{r}
+t.test(d$JobSatisfaction ~ d$Attrition)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.0001052) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among attired and non-attired in terms of their job satisfaction level*. Moreover, based on output we can conclude that *attired workers have lower job satisfaction level on average in comparison with non-attired*.
+
+$Distance$ $From$ $Home$
+
+As distance from home is numeric and attrition is factor with 2 levels we need to conduct t-test to check the relationship.
+
+*Our null hypothesis*: there is no statistically significant difference among attired and non-attired in terms of their distance from home
+
+```{r}
+t.test(d$DistanceFromHome ~ d$Attrition)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.004137) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among attired and non-attired in terms of their distance from home*. Moreover, based on output we can conclude that *attired workers have higher distance from home on average in comparison with non-attired*.
+
+$Environment$ $Satisfaction$
+
+As environment satisfaction level is numeric and attrition is factor with 2 levels we need to conduct t-test to check the relationship.
+
+*Our null hypothesis*: there is no statistically significant difference among attired and non-attired in terms of their environment satisfaction level
+
+```{r}
+t.test(d$EnvironmentSatisfaction ~ d$Attrition)
+```
+
+Output tells us that p-value is less than 0.05 (it is 0.0002092) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among attired and non-attired in terms of their environment satisfaction level*. Moreover, based on output we can conclude that *attired workers have lower environment satisfaction level on average in comparison with non-attired*.
+
+$Job$ $Role$
+
+As the job role and the variable about attrition are **both factor** , we need to conduct chi-square test.
+
+*Our null hypothesis*: there is no relationship between attrition and job role. 
+
+```{r}
+chisq.test(d$Attrition, d$JobRole)
+```
+
+Output tells us that p-value is less than 0.05 (it is 2.752e-15) that is why we can reject our null hypothesis. So, *there is a statistically significant difference among groups*. However, we can not tell the exact difference between groups, based on the output, that is why we need to check standardized residuals.
+
+```{r}
+chisq.test(d$Attrition, d$JobRole)$stdres
+```
+
+We should consider those levels that have values more than 2 by modulus. We can see that Laboratory Technicians and Sales Representatives tend to attire (that is quite similar to education field results). Healthcare Representatives, Managers, Manufacturing Directors and Research Directors do not tend to attire.  
+
+### Modelling
+
+For modelling we will use *logit link function*. We will describe in details the best model.
+
+Firstly, let's create model with only factor variables.
+
+```{r}
+m1 = glm(Attrition ~ BusinessTravel + MaritalStatus + EducationField + JobRole + OverTime, data = d, family = binomial)
+sjPlot::tab_model(m1)
+```
+
+We can see that Education Field is not statistically significant now with any level. Let's delete this predictor and check whether our model is better with or without this variable
+
+```{r}
+m2 = glm(Attrition ~ BusinessTravel + MaritalStatus  + JobRole + OverTime, data = d, family = binomial)
+anova(m2, m1, test = "Chisq")
+```
+
+P-value is bigger than 0.05, that is why we should reject the more complex model and stick to the model without Education Field.
+
+Now let's add numeric variables.
+
+```{r}
+m3 = glm(Attrition ~ BusinessTravel + MaritalStatus  + JobRole + OverTime +  MonthlyIncome + WorkLifeBalance + YearsAtCompany + JobSatisfaction + DistanceFromHome + EnvironmentSatisfaction, data = d, family = binomial)
+sjPlot::tab_model(m3)
+```
+
+We can see that monthly income is not statistically significant in our model. Let's eliminate it and create model without this variable and compare last 2 models.
+
+```{r}
+m4 = glm(Attrition ~ BusinessTravel + MaritalStatus  + JobRole + OverTime  + WorkLifeBalance + YearsAtCompany + JobSatisfaction + DistanceFromHome + EnvironmentSatisfaction, data = d, family = binomial)
+anova(m4, m3, test = "Chisq")
+```
+
+P-value is bigger than 0.05, that is why we should reject the more complex model and stick to the model without monthly income.
+
+Now let's compare the second and the forth model.
+
+```{r}
+anova(m2, m4, test = "Chisq")
+```
+
+P-value is less than 0.05, that means that the more complex model is better. 
+
+Now let's describe this final model in more details.
+
+```{r}
+sjPlot::tab_model(m4)
+```
+
+1) Being a frequent business traveler, compared to non-travelers, leads to 333% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+2) Being a rare business traveler, compared to non-travelers, leads to 109% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+3) Being a single worker, compared to divorced ones, leads to 253% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+4) Working in Human Resources, compared to Healthcare Representative, leads to 416% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+5) Working as Laboratory Technician, compared to Healthcare Representative, leads to 364% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+6) Working as Sales Executive, compared to Healthcare Representative, leads to 206% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+7) Working as Sales Representative, compared to Healthcare Representative, leads to 806% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+8) Working overtime, compared to not working overtime, leads to 442% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+9) The increase in work-life balance level by 1 leads to 27% decrease in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+10) The increase of years at company by 1 leads to 4% decrease in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+11) The increase in job satisfaction level by 1 leads to 31% decrease in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+12) The increase in distance from home by 1 leads to 3% increase in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+13) The increase in environment satisfaction level by 1 leads to 31% decrease in the odds of being an attired and it is statistically significant as the p-value is less than 0.05
+
+### Model analysis
+
+Let's see the marginal effects of the final model
+
+```{r}
+margins::margins_summary(m4)
+```
+
+1) Being a frequent business traveler, compared to non-travelers, leads to 0.1467 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+2) Being a rare business traveler, compared to non-travelers, leads to 0.0613 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+3) Being a single worker, compared to divorced ones, leads to 0.1367 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+4) Working in Human Resources, compared to Healthcare Representative, leads to 0.1678 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+5) Working as Laboratory Technician, compared to Healthcare Representative, leads to 0.1526 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+6) Working as Research Scientist, compared to Healthcare Representative, leads to 0.0599 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+7) Working as Sales Executive, compared to Healthcare Representative, leads to 0.0989 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+8) Working as Sales Representative, compared to Healthcare Representative, leads to 0.2574 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+9) Working overtime, compared to not working overtime, leads to 0.2082 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+10) The increase in work-life balance level by 1 leads to 0.0325 decrease in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+11) The increase of years at company by 1 leads to 0.0046 decrease in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+12) The increase in job satisfaction level by 1 leads to 0.0381 decrease in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+13) The increase in distance from home by 1 leads to 0.0035 increase in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+14) The increase in environment satisfaction level by 1 leads to 0.0377 decrease in the probability on average of being an attired and it is statistically significant as the p-value is less than 0.05
+
+Let's visualize marginal effects of Job Satisfaction to understand better what they mean.
+
+```{r}
+sjPlot::plot_model(m4, type = 'pred', terms = c('JobSatisfaction'), axis.title = c('JobSatisfaction','Probability of Attrition', title = ''))
+```
+
+We can see that indeed with increase in Job Satisfaction the probability of attrition is decreasing on average.
+
+#### Diagnostics of the model
+
+1. Pseudo-R2:
+
+```{r}
+pscl::pR2(m4)[4]
+```
+
+We can see that pseudo-R2 is 0.2382697, and that's great because the threshold for good results is 0.2-0.4.
+
+2. Sensitivity 
+
+```{r}
+sens_m4 = pROC::roc(d$Attrition, predict(m4, d, type = "response")) 
+plot(sens_m4)
+```
+
+We can see that the plot of the sensitivity has quite big area under the curve, that means that the model predicts well.
+
+Let's compute the precise Area Under Curve (AUC) to be more precise
+
+```{r}
+fitted_m4 = predict(m4, d, type = "response")
+pROC::auc(d$Attrition, fitted_m4)
+```
+
+Indeed, we have high AUC for the second model that is equal to 0.8226, that is very great result!
+
+3. The percent of correctly predicted
+
+```{r}
+pscl::hitmiss(m4)
+```
+
+We can see that in general the model poorly predicts the needed category (attrition) and they better predict not attrition. Well, that's not so good, but it can be explained by the fact that our sample has a lot more observations with no attrition. In other words, if we upsample our data, for example, we will get better results.
+
+4. Multicolinearity
+
+Let's check model for the multicollinearity. 
+
+```{r}
+car::vif(m4)
+```
+
+Great news! There are no predictors that have GVIF higher than 4 that means that there is no multicollinearity.
+
+## Results
+
+All in all, we can say that workers that are more endangered in terms of attrition:
+
+* Work overtime
+
+* Single 
+
+* Work as Sales Representative / Sales Executive / Laboratory Technician / HR
+
+* Travel for business purposes frequently or even rarely
+
+* Work far from home
+
+
+## References
+
+- Chiradeep, B. (2021, November 3). What Is Employee Attrition? Definition, Attrition Rate, Factors, and Reduction Best Practices. Spiceworks.
+
+- Gaurav, K. (2010). Drivers of Employee Satisfaction and Attrition.
+
+- Kurniawaty, K., Ramly, M., & Ramlawati, R. (2019). The effect of work environment, stress, and job satisfaction on employee turnover intention. Management Science Letters, 877–886. https://doi.org/10.5267/j.msl.2019.3.001
+
+- Lata, K. (2023, February 14). Uncovering the Top Reasons Behind Employee Attrition: Effects and Strategies to Combat Them. Kredily.
+
+- Ong, R. (2021, March 19). Understanding Employee Attrition. Geek Culture.
+Quiambao, L. (2021). Employee Engagement Survey: The Productivity Gap.
+
+- Raza, A., Munir, K., Almutairi, M., Younas, F., & Fareed, M. M. S. (2022). Predicting Employee Attrition Using Machine Learning Approaches. Applied Sciences, 12(13), 6424. https://doi.org/10.3390/app12136424
+
+- Stratford, F. (2018, December 9). Why business travel packages are key to employee retention. EuropeanCEO.
+The Importance of a Work-Life Balance in an Employee Retention Strategy. (2022, March 10). Business Benefit Group.
+
+- Wenger, J., & Hodari, A. (2004). Predictors of Attrition: Attitudes, Behaviors, and Educational Characteristics. The CNA Corporation.
+
+- Трудовой передел: В России установлен рекорд по увольнениям и найму работников. (2022, December 26). Inexpertiza.
